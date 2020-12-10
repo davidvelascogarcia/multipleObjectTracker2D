@@ -1,4 +1,4 @@
-[![multipleObjectTracker2D Homepage](https://img.shields.io/badge/multipleObjectTracker2D-develop-orange.svg)](https://github.com/davidvelascogarcia/multipleObjectTracker2D/tree/develop/programs) [![Latest Release](https://img.shields.io/github/tag/davidvelascogarcia/multipleObjectTracker2D.svg?label=Latest%20Release)](https://github.com/davidvelascogarcia/tensorflowLiteDetection2D/tags) [![Build Status](https://travis-ci.org/davidvelascogarcia/multipleObjectTracker2D.svg?branch=develop)](https://travis-ci.org/davidvelascogarcia/multipleObjectTracker2D)
+[![multipleObjectTracker2D Homepage](https://img.shields.io/badge/multipleObjectTracker2D-develop-orange.svg)](https://github.com/davidvelascogarcia/multipleObjectTracker2D/tree/develop/programs) [![Latest Release](https://img.shields.io/github/tag/davidvelascogarcia/multipleObjectTracker2D.svg?label=Latest%20Release)](https://github.com/davidvelascogarcia/multipleObjectTracker2D/tags) [![Build Status](https://travis-ci.org/davidvelascogarcia/multipleObjectTracker2D.svg?branch=develop)](https://travis-ci.org/davidvelascogarcia/multipleObjectTracker2D)
 
 # Multiple Object: Tracker 2D (Python API)
 
@@ -24,7 +24,7 @@
 The module can be configured in [config.ini](./config) file, selecting the track you want to use, also image source size to be resize and improve speed.
 By default use user webcam, but can be configured to use IP video source, local file or `OpenCV` supported sources.
 
-Also this module has support to use `YARP` middleware, and can receive video source from `YARP` port, the module receive in `/multipleObjectTracker2D/img:i` port. Also publish in `YARP` network in `/multipleObjectTracker2D/img:o` processed image source. 
+Also this module has support to use `YARP` middleware, and can receive video source from `YARP` port, the module receive in `/multipleObjectTracker2D/img:i` port. Also publish in `YARP` network in `/multipleObjectTracker2D/img:o` processed image source.
 
 Centroid tracked object coordinates is published in `/multipleObjectTracker2D/data:o YARP` port.
 
@@ -61,8 +61,8 @@ NOTE:
 * [Install pip3](https://github.com/roboticslab-uc3m/installation-guides/blob/master/install-pip.md)
 * Install OpenCV and OpenCV Contrib
 ```bash
-pip3 install opencv-python==3.4.6.27
-pip3 install opencv-python-contrib==3.4.6.27
+pip3 install opencv-python==3.4.7.28
+pip3 install opencv-contrib-python==3.4.7.28
 ```
 * [Install YARP 2.3.XX+](https://github.com/roboticslab-uc3m/installation-guides/blob/master/install-yarp.md) with Python 3 bindings
 
@@ -80,4 +80,4 @@ Tested on: `windows 10`, `ubuntu 16.04`, `ubuntu 18.04`, `lubuntu 18.04` and `ku
 
 * [OpenCV: Tracking API](https://docs.opencv.org/3.4/d9/df8/group__tracking.html)
 * [OpenCV: Introducction to Tracking](https://docs.opencv.org/3.4/d2/d0a/tutorial_introduction_to_tracker.html)
-* [davidvelascogarcia: Tensorflow: Detector 2D (PYTHON API)](https://github.com/davidvelascogarcia/tensorflowLiteDetection2D)
+* [davidvelascogarcia: Tensorflow: Detector 2D (Python API)](https://github.com/davidvelascogarcia/tensorflowLiteDetection2D)

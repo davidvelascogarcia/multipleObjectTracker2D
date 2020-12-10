@@ -1,0 +1,86 @@
+# Integración continua Travis CI
+
+# Lenguaje de programación
+
+language: python
+python:
+   - "3.6"
+
+# Sistema operativo destino a probar
+
+os: linux
+
+# Distribución del sistema operativo
+
+dist: xenial
+
+# Requerimiento de permisos en Linux
+
+sudo: enabled
+
+# Compiladores a emplear
+
+compiler:
+#  - gcc
+   - clang
+
+# Tareas a realizar antes de instalacción
+
+before_install:
+
+# Actualizar
+
+  - sudo apt-get -qq update
+
+# Configurar Git si no lo está
+
+  - if [ ! `git config --get user.email` ]; then `git config --global user.email 'user@example.com'`; fi
+  - if [ ! `git config --get user.name` ]; then `git config --global user.name 'Travis CI'`; fi
+
+# En caso de requerir instalar algo para la prueba
+
+install:
+
+# Instalar dependencias
+
+  - sudo apt-get -y install libjpeg-dev libtiff5-dev libjasper-dev libpng12-dev
+  - sudo apt-get -y install libavcodec-dev libavformat-dev libswscale-dev libv4l-dev
+  - sudo apt-get -y install libxvidcore-dev libx264-dev
+  - sudo apt-get -y install qt4-dev-tools libatlas-base-dev
+  - sudo apt-get install python3-pip
+  - sudo python -m pip install setuptools
+  - sudo python -m pip install scikit-build
+  - sudo python -m pip install enum34 --upgrade --ignore-installed
+# Instalar YARP
+
+  - sudo sh -c 'echo "deb http://www.icub.org/ubuntu xenial contrib/science" > /etc/apt/sources.list.d/icub.list'
+  - sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 57A5ACB6110576A6
+  - sudo apt-get update
+  - sudo apt-get install yarp
+
+# Instalar OpenCV
+
+  - sudo python -m pip install opencv-python==3.4.7.28
+  - sudo python -m pip install opencv-contrib-python==3.4.7.28
+
+# Tareas a ejecutar antes de nuestra prueba
+
+before_script:
+
+  - cd programs
+
+# Compilamos
+
+script:
+
+# En caso de compilación exitosa
+  - cd
+
+after_success:
+
+  - cd ..
+
+# Notificaciones por correo
+
+notifications:
+email: true
