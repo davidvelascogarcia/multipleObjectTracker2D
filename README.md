@@ -3,17 +3,11 @@
 # Multiple Object: Tracker 2D (Python API)
 
 - [Introduction](#introduction)
-- [Authors](#authors)
 - [Running Software](#running-software)
 - [Requirements](#requirements)
 - [Status](#status)
 - [Related projects](#related-projects)
 
-## Authors
-
-- David Velasco García: [@davidvelascogarcia](https://github.com/davidvelascogarcia)
-- Franz García Boada: [@Franzmgarcia](https://github.com/Franzmgarcia)
-- Antonio Ramón Otero: [@antoniorotero16](https://github.com/antoniorotero16)
 
 ## Introduction
 
@@ -39,7 +33,7 @@ The module can be used with or without `YARP` dependences and configured in [con
 
 - **Running with YARP support**
 
-1. Configure [config.ini](./config) to select `yarp-mode` and `yarp-receive` if you want to use `YARP` input.
+1. Configure [config.ini](./config) to select `yarp-send` and `yarp-receive` if you want to use `YARP` input, output or both of them.
 2. Create or configure YARP Server.
 3. Connect `YARP` input port if needed.
 ```bash

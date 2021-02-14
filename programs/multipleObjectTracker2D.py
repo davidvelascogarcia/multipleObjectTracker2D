@@ -3,8 +3,6 @@
   *      Program: Multiple Object Tracker 2D
   *      Type: Python
   *      Author: David Velasco Garcia @davidvelascogarcia
-  *              Franz García Boada @Franzmgarcia
-  *              Antonio Ramón Otero @antoniorotero16
   * ************************************************************
   *
   * | INPUT PORT                           | CONTENT                                                 |
@@ -23,505 +21,549 @@ from __future__ import print_function
 import configparser
 import cv2
 import datetime
-import os
+from halo import Halo
+import numpy as np
 import platform
 from random import randint
-import sys
 import time
-import numpy as np
+import yarp
 
-# Variable to control yarp installed
-try:
-    import yarp
-    yarpInstalled = 1
 
-except:
-    print("")
-    print("[ERROR] Error, YARP middleware not installed, using not YARP mode.")
-    print("")
-    yarpInstalled = 0
+class MultipleObjectTracker2D:
 
-# Function: objectTrackerBuilder
-def objectTrackerBuilder(trackerType):
+    # Function: Constructor
+    def __init__(self):
 
-    # Build an object tracker based on his type
-    if trackerType == objectTrackerTypesArray[0]:
-        objectTracker = cv2.TrackerBoosting_create()
+        # Build Halo spinner
+        self.systemResponse = Halo(spinner='dots')
 
-    elif trackerType == objectTrackerTypesArray[1]:
-        objectTracker = cv2.TrackerMIL_create()
+        # Build object tracker types
+        self.objectTrackerTypes = ['BOOSTING', 'MIL', 'KCF','TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
 
-    elif trackerType == objectTrackerTypesArray[2]:
-        objectTracker = cv2.TrackerKCF_create()
+    # Function: getSystemPlatform
+    def getSystemPlatform(self):
 
-    elif trackerType == objectTrackerTypesArray[3]:
-        objectTracker = cv2.TrackerTLD_create()
+        # Get system configuration
+        print("\nDetecting system and release version ...\n")
+        systemPlatform = platform.system()
+        systemRelease = platform.release()
 
-    elif trackerType == objectTrackerTypesArray[4]:
-        objectTracker = cv2.TrackerMedianFlow_create()
-
-    elif trackerType == objectTrackerTypesArray[5]:
-        objectTracker = cv2.TrackerGOTURN_create()
-
-    elif trackerType == objectTrackerTypesArray[6]:
-        objectTracker = cv2.TrackerMOSSE_create()
-
-    elif trackerType == objectTrackerTypesArray[7]:
-        objectTracker = cv2.TrackerCSRT_create()
-
-    else:
-        objectTracker = None
-
-        print("")
-        print("[ERROR] Error Tracker Type selected not supported.")
-        print("")
-
-        print("[INFO] Supported Tracker Types:")
-        print("")
-
-        for objectTrackerTypes in objectTrackerTypesArray:
-            print(objectTrackerTypes)
-
-    return objectTracker
-
-# Function: objetTrackerSelectTargets
-def objetTrackerSelectTargets(rgbFrame, boxesArray, colorsArray):
-
-    # Variable to control target selecction
-    loopControlTargetSelection = 0
-
-    while int(loopControlTargetSelection) == 0:
-
-        # Call to interactive GUI selectROI  function
-        boxObject = cv2.selectROI('[PROCESSED] multipleObjectTracker2D', rgbFrame)
-
-        # Add region of interest to boxesArray
-        boxesArray.append(boxObject)
-
-        # Select random color to tracker object
-        colorsArray.append((randint(0, 255), randint(0, 255), randint(0, 255)))
-
-        print("")
-        print("[INFO] Target selected and added correctly.")
-        print("")
-
-        print("")
-        print("[INFO] Press q to end selection targets or press c to continue selecting targets.")
-        print("")
-
-        # If q is pressed
-        k = cv2.waitKey(0) & 0xFF
-        if (k == 113):
-            loopControlTargetSelection = 1
-
-            print("")
-            print("[INFO] Targets selection finished correctly, starting object tracking.")
-            print("")
-
-    return boxesArray, colorsArray
-
-print("")
-print("")
-print("**************************************************************************")
-print("**************************************************************************")
-print("                  Program: Multiple Object Tracker 2D                     ")
-print("                     Author: David Velasco Garcia                         ")
-print("                             @davidvelascogarcia                          ")
-print("**************************************************************************")
-print("**************************************************************************")
-
-print("")
-print("Starting system ...")
-print("")
-
-print("")
-print("Loading multipleObjectTracker2D module ...")
-print("")
-
-# Get system configuration
-print("")
-print("Detecting system and release version ...")
-print("")
-systemPlatform = platform.system()
-systemRelease = platform.release()
-
-print("")
-print("**************************************************************************")
-print("Configuration detected:")
-print("**************************************************************************")
-print("")
-print("Platform:")
-print(systemPlatform)
-print("Release:")
-print(systemRelease)
-
-print("")
-print("**************************************************************************")
-print("Object Tracker Configuration:")
-print("**************************************************************************")
-print("")
-
-# Variable to loopControlFileExists
-loopControlFileExists = 0
-
-while int(loopControlFileExists) == 0:
-
-    # If file founded
-    try:
-        # Get object tarcker congiguration
-        print("")
-        print("Getting object tracker configuration ...")
-        print("")
-        configurationObject = configparser.ConfigParser()
-        configurationObject.read('../config/config.ini')
-        configurationObject.sections()
-
-        videoSource = configurationObject['Configuration']['video-source']
-        imgWidth = configurationObject['Configuration']['image-width']
-        imgHeight = configurationObject['Configuration']['image-height']
-        trackerType = configurationObject['Configuration']['tracker-type']
-        yarpMode = configurationObject['Configuration']['yarp-mode']
-        yarpReceive = configurationObject['Configuration']['yarp-receive']
-
-        print("")
-        print("[INFO] Video Source: " + str(videoSource))
-        print("[INFO] Image Width: " + str(imgWidth))
-        print("[INFO] Video Height: " + str(imgHeight))
-        print("[INFO] Tracker Type: " + str(trackerType))
-        print("[INFO] YARP Mode: " + str(yarpMode))
-        print("[INFO] YARP Receive: " + str(yarpReceive))
-        print("")
-
-        # Image size
-        image_w = int(imgWidth)
-        image_h = int(imgHeight)
-
-        # Set loopControlFileExists
-        loopControlFileExists = 1
-
-    # If file not founded
-    except:
-        print("")
-        print("[ERROR] Sorry, config.ini not founded, waiting 4 seconds to the next check ...")
-        print("")
-        time.sleep(4)
-
-print("")
-print("[INFO] Data obtained correctly.")
-print("")
-
-
-if (int(yarpInstalled) == 1) and (int(yarpMode) == 1):
-
-    print("")
-    print("**************************************************************************")
-    print("YARP configuration:")
-    print("**************************************************************************")
-    print("")
-    print("Initializing YARP network ...")
-    print("")
-
-    # Init YARP Network
-    yarp.Network.init()
-
-    print("")
-    print("[INFO] Opening image input port with name /multipleObjectTracker2D/img:i ...")
-    print("")
-
-    # Open input image port
-    multipleObjectTracker2D_portIn = yarp.BufferedPortImageRgb()
-    multipleObjectTracker2D_portNameIn = '/multipleObjectTracker2D/img:i'
-    multipleObjectTracker2D_portIn.open(multipleObjectTracker2D_portNameIn)
-
-    print("")
-    print("[INFO] Opening image output port with name /multipleObjectTracker2D/img:o ...")
-    print("")
-
-    # Open output image port
-    multipleObjectTracker2D_portOut = yarp.Port()
-    multipleObjectTracker2D_portNameOut = '/multipleObjectTracker2D/img:o'
-    multipleObjectTracker2D_portOut.open(multipleObjectTracker2D_portNameOut)
-
-    print("")
-    print("[INFO] Opening data output port with name /multipleObjectTracker2D/data:o ...")
-    print("")
-
-    # Open output data port
-    multipleObjectTracker2D_portOutDet = yarp.Port()
-    multipleObjectTracker2D_portNameOutDet = '/multipleObjectTracker2D/data:o'
-    multipleObjectTracker2D_portOutDet.open(multipleObjectTracker2D_portNameOutDet)
-
-    # Create data bootle
-    outputBottleMultipleObjectTracker2D = yarp.Bottle()
-
-    # Image size
-    image_w = int(imgWidth)
-    image_h = int(imgHeight)
-
-    # Prepare input image buffer
-    in_buf_array = np.ones((image_h, image_w, 3), np.uint8)
-    in_buf_image = yarp.ImageRgb()
-    in_buf_image.resize(image_w, image_h)
-    in_buf_image.setExternal(in_buf_array.data, in_buf_array.shape[1], in_buf_array.shape[0])
-
-    # Prepare output image buffer
-    out_buf_image = yarp.ImageRgb()
-    out_buf_image.resize(image_w, image_h)
-    out_buf_array = np.zeros((image_h, image_w, 3), np.uint8)
-    out_buf_image.setExternal(out_buf_array.data, out_buf_array.shape[1], out_buf_array.shape[0])
-
-    print("")
-    print("[INFO] YARP network configured correctly.")
-    print("")
-
-# Build objectTrackerTypesArray
-objectTrackerTypesArray = ['BOOSTING', 'MIL', 'KCF','TLD', 'MEDIANFLOW', 'GOTURN', 'MOSSE', 'CSRT']
-
-print("")
-print("**************************************************************************")
-print("Initialize video source:")
-print("**************************************************************************")
-print("")
-print("[INFO] Initializing video source ...")
-print("")
-
-# If YARP full receive mode is available
-if (int(yarpInstalled) == 1) and (int(yarpMode) == 1) and (int(yarpReceive) == 1):
-
-    # Receive image source
-    frame = multipleObjectTracker2D_portIn.read()
-
-    # Buffer processed image
-    in_buf_image.copy(frame)
-    assert in_buf_array.__array_interface__['data'][0] == in_buf_image.getRawImage().__int__()
-
-    # YARP -> OpenCV
-    rgbFrame = in_buf_array[:, :, ::-1]
-
-    # Set success as True because wait until receive
-    success = True
-
-else:
-    # Create VideoCapture object if webcam selected
-    if str(videoSource) == "0":
-
-        videoCaptureObject = cv2.VideoCapture(0)
-
-    # If video file selected
-    else:
-        videoCaptureObject = cv2.VideoCapture(str(videoSource))
-
-    # Get first frame
-    # Variable to control get first frame
-    loopControlGetFirstFrame = 0
-
-    # Get 5 frame to prevent dark frame at staring webcam
-    while int(loopControlGetFirstFrame) < 5:
-        # Get Video Source frame
-        success, rgbFrame = videoCaptureObject.read()
-
-        # Count loopControlGetFirstFrame + 1
-        loopControlGetFirstFrame = loopControlGetFirstFrame + 1
-
-# If there is an error getting video source
-if not success:
-    print("")
-    print("[ERROR] Error getting video source.")
-    print("[INFO] Closing multipleObjectTracker2D program ...")
-    print("")
-
-    # Exit program
-    sys.exit(1)
-
-else:
-
-    try:
-        # Resize video source to selected resolution
-        rgbFrame = cv2.resize(rgbFrame, (image_w, image_h))
-
-        # Print commands
-        print("")
         print("**************************************************************************")
+        print("Configuration detected:")
+        print("**************************************************************************")
+        print("\nPlatform:")
+        print(systemPlatform)
+        print("Release:")
+        print(systemRelease)
+
+        return systemPlatform, systemRelease
+
+    # Function: getAuthenticationData
+    def getAuthenticationData(self):
+
+        print("\n**************************************************************************")
+        print("Authentication:")
+        print("**************************************************************************\n")
+
+        loopControlFileExists = 0
+
+        while int(loopControlFileExists) == 0:
+            try:
+                # Get authentication data
+                print("\nGetting authentication data ...\n")
+
+                authenticationData = configparser.ConfigParser()
+                authenticationData.read('../config/config.ini')
+                authenticationData.sections()
+
+                videoSource = authenticationData['Configuration']['video-source']
+                imageWidth = authenticationData['Configuration']['image-width']
+                imageHeight = authenticationData['Configuration']['image-height']
+                trackerType = authenticationData['Configuration']['tracker-type']
+
+                yarpSend = authenticationData['YARP']['yarp-send']
+                yarpReceive = authenticationData['YARP']['yarp-receive']
+
+                print("Video Source: " + str(videoSource))
+                print("Image width: " + str(imageWidth))
+                print("Image height: " + str(imageHeight))
+                print("Tracker Type: " + str(trackerType))
+
+                print("YARP Send: " + str(yarpSend))
+                print("YARP Receive: " + str(yarpReceive))
+
+                # Convert image from string to int
+                imageWidth = int(imageWidth)
+                imageHeight = int(imageHeight)
+
+                # Exit loop
+                loopControlFileExists = 1
+
+            except:
+
+                systemResponseMessage = "\n[ERROR] Sorry, config.ini not founded, waiting 4 seconds to the next check ...\n"
+                self.systemResponse.text_color = "red"
+                self.systemResponse.fail(systemResponseMessage)
+                time.sleep(4)
+
+        systemResponseMessage = "\n[INFO] Data obtained correctly.\n"
+        self.systemResponse.text_color = "green"
+        self.systemResponse.succeed(systemResponseMessage)
+
+        return videoSource, imageWidth, imageHeight, trackerType, yarpSend, yarpReceive
+
+    # Function: checkYARPInstalled
+    def checkYARPInstalled(self):
+
+        try:
+            import yarp
+            yarpInstalled = 1
+
+        except:
+            systemResponseMessage = "\n[ERROR] Sorry, YARP middleware not installed. Using not YARP mode.\n"
+            self.systemResponse.text_color = "red"
+            self.systemResponse.fail(systemResponseMessage)
+
+            yarpInstalled = 0
+
+        return yarpInstalled
+
+    # Function: getObjectTracker
+    def getObjectTracker(self):
+
+        objectTracker = cv2.MultiTracker_create()
+
+        return objectTracker
+
+    # Function: getTracker
+    def getTracker(self, trackerType):
+
+        if trackerType == self.objectTrackerTypes[0]:
+            tracker = cv2.TrackerBoosting_create()
+
+        elif trackerType == self.objectTrackerTypes[1]:
+            tracker = cv2.TrackerMIL_create()
+
+        elif trackerType == self.objectTrackerTypes[2]:
+            tracker = cv2.TrackerKCF_create()
+
+        elif trackerType == self.objectTrackerTypes[3]:
+            tracker = cv2.TrackerTLD_create()
+
+        elif trackerType == self.objectTrackerTypes[4]:
+            tracker = cv2.TrackerMedianFlow_create()
+
+        elif trackerType == self.objectTrackerTypes[5]:
+            tracker = cv2.TrackerGOTURN_create()
+
+        elif trackerType == self.objectTrackerTypes[6]:
+            tracker = cv2.TrackerMOSSE_create()
+
+        elif trackerType == self.objectTrackerTypes[7]:
+            tracker = cv2.TrackerCSRT_create()
+
+        else:
+            tracker = cv2.TrackerCSRT_create()
+
+        return tracker
+
+    # Function: systemInfo
+    def systemInfo(self):
+
+        print("\n**************************************************************************")
         print("User controller:")
-        print("**************************************************************************")
-        print("")
-        print("1. Select region of interest with mouse controller.")
+        print("**************************************************************************\n")
+        print("1. Select region of interest with mouse.")
         print("2. Press enter to save region of interest to be tracked.")
-        print("3. Press q to end region selection and start to track, or press c to continue selecting more regions.")
+        print("3. Press q to ends region selection or press c to continue selecting more regions.")
         print("4. Press u with program is working to update or re-select region of interest.")
-        print("")
 
-        if (int(yarpInstalled) == 1) and (int(yarpMode) == 1):
+    # Function: initializeCaptureDevices
+    def initializaCaptureDevices(self, videoSource):
 
-            print("")
-            print("**************************************************************************")
-            print("YARP Ports:")
-            print("**************************************************************************")
-            print("")
-            print("Processed image will be send by /multipleObjectTracker2D/img:o YARP port.")
-            print("Processed target centroid coordinates will be send by /multipleObjectTracker2D/data:o YARP port.")
-            print("")
+        self.systemResponse.text = "Initializing capture device ..."
+        self.systemResponse.text_color = "blue"
+        self.systemResponse.start()
 
-    except:
-        print("")
-        print("[ERROR] Error resizing rgbFrame.")
-        print("")
+        # If read from local webcam
+        if str(videoSource) == "0":
+            captureDevice = cv2.VideoCapture(0)
 
-# Build boxesArray and colorsArray
-boxesArray = []
-colorsArray = []
+        # If video file or IP camera
+        else:
+            captureDevice = cv2.VideoCapture(str(videoSource))
 
-print("")
-print("[INFO] Initializing selection object tracking ...")
-print("")
+        # Variable to to prevent dark frame at staring webcam
+        loopControlGetFirstFrame = 0
 
-# Call objetTrackerSelectTargets function
-boxesArray, colorsArray = objetTrackerSelectTargets(rgbFrame, boxesArray, colorsArray)
+        while int(loopControlGetFirstFrame) < 5:
+            success, dataToSolve = captureDevice.read()
 
-print("")
-print("[INFO] Initializing multiple object tracker ...")
-print("")
+            # Increase loopControlGetFirstFrame
+            loopControlGetFirstFrame = loopControlGetFirstFrame + 1
 
-# Create multiTracker object
-multipleObjectTracker = cv2.MultiTracker_create()
+        self.systemResponse.stop()
 
-# Initialize multiTracker object with region of interest selected in each box of rgbFrame
-for box in boxesArray:
-    multipleObjectTracker.add(objectTrackerBuilder(trackerType), rgbFrame, box)
+        return captureDevice
 
-print("")
-print("[INFO] Multiple object tracker Initialized correctly.")
-print("")
+    # Function: getDataToSolve
+    def getDataToSolve(self, yarpReceive, inputImagePort, imageWidth, imageHeight):
 
-# Variable to control loopControlReadImage
-loopControlReadImage = 0
+        # Receive from selected source
+        if int(yarpReceive) == 1:
+            dataToSolve = inputImagePort.receive()
 
-# Process image source to track object with source is active
-while int(loopControlReadImage) == 0:
+        # If not YARP mode
+        else:
+            success, dataToSolve = inputImagePort.read()
 
-    # If YARP full receive mode is available
-    if (int(yarpInstalled) == 1) and (int(yarpMode) == 1) and (int(yarpReceive) == 1):
+        # Resize data to solved
+        dataToSolve = cv2.resize(dataToSolve, (imageWidth, imageHeight))
 
-        # Receive image source
-        frame = multipleObjectTracker2D_portIn.read()
+        return dataToSolve
 
-        # Buffer processed image
-        in_buf_image.copy(frame)
-        assert in_buf_array.__array_interface__['data'][0] == in_buf_image.getRawImage().__int__()
+    # Function: getTargets
+    def getTargets(self, dataToSolve):
 
-        # YARP -> OpenCV
-        rgbFrame = in_buf_array[:, :, ::-1]
+        # Build boxes and colors arrays
+        boxes = []
+        colors = []
 
-        # Set success as True because wait until receive
-        success = True
+        loopControlTargetSelection = 0
 
-    else:
+        while int(loopControlTargetSelection) == 0:
 
-        success, rgbFrame = videoCaptureObject.read()
+            # Call to interactive GUI selectROI to select the target box
+            box = cv2.selectROI('[PROCESSED] multipleObjectTracker2D', dataToSolve)
 
-    # If there is and error
-    if not success:
-        loopControlReadImage = 1
-        break
+            # Add region of interest to boxes
+            boxes.append(box)
 
-    # If not error happened
-    else:
-        # Resize video source to selected resolution
-        rgbFrame = cv2.resize(rgbFrame, (image_w, image_h))
+            # Select random color to tracker object
+            colors.append((randint(0, 255), randint(0, 255), randint(0, 255)))
 
-        # Update multipleObjectTracker with new frame and update target box location to boxesArray
-        success, boxesArray = multipleObjectTracker.update(rgbFrame)
+            systemResponseMessage = "\n[INFO] Target selected correctly.\n"
+            self.systemResponse.text_color = "blue"
+            self.systemResponse.info(systemResponseMessage)
 
-        # Draw target detected box and name in rgbFrame for each target
-        for color, newBox in enumerate(boxesArray):
+            systemResponseMessage = "\n[INFO] Enter q to ends selection. Enter c to select an additional target.\n"
+            self.systemResponse.text_color = "red"
+            self.systemResponse.fail(systemResponseMessage)
+
+            # If q is pressed exit selection
+            k = cv2.waitKey(0) & 0xFF
+
+            if (k == 113):
+                loopControlTargetSelection = 1
+
+                systemResponseMessage = "\n[INFO] Target selection done correctly.\n"
+                self.systemResponse.text_color = "green"
+                self.systemResponse.succeed(systemResponseMessage)
+
+        return boxes, colors
+
+    # Function: addTargets
+    def addTargets(self, objectTracker, trackerType, dataToSolve, boxes):
+
+        for box in boxes:
+            objectTracker.add(self.getTracker(trackerType), dataToSolve, box)
+
+        return objectTracker
+
+    # Function: drawBoxes
+    def drawBoxes(self, boxes, colors, dataToSolve, yarpSend, outputDataPort):
+
+        # Draw box and name in data to solve frame for each target
+        for colorIndex, box in enumerate(boxes):
 
             # Prepare point P1: Up-Left box point
-            p1 = (int(newBox[0]), int(newBox[1]))
+            p1 = (int(box[0]), int(box[1]))
 
             # Prepare point P2: Down-Right box point, P1 + horizontal distance and P1 + vertical distance
-            p2 = (int(newBox[0] + newBox[2]), int(newBox[1] + newBox[3]))
+            p2 = (int(box[0] + box[2]), int(box[1] + box[3]))
 
-            # Draw rectangle in coordinates with prealculated random color
-            cv2.rectangle(rgbFrame, p1, p2, colorsArray[color], 2, 1)
+            # Draw rectangle in target with random color
+            cv2.rectangle(dataToSolve, p1, p2, colors[colorIndex], 2, 1)
 
-            # Add target ID down image
-            cv2.putText(rgbFrame, "TARGET: " + str(int(color + 1)), (int(newBox[0]), int(newBox[1] + newBox[3]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, colorsArray[color], 2)
+            # Prepare target ID
+            targetID = "TARGET: " + str(int(colorIndex + 1))
 
-            # Get centroid coordinatesXY
-            coordinateX = int(newBox[0]) + int(newBox[2]/2)
-            coordinateY = int(newBox[1]) + int(newBox[3]/2)
-            coordinatesXY = "X: " + str(coordinateX) + ", Y: " + str(coordinateY)
+            # Draw ID on target box
+            cv2.putText(dataToSolve, targetID, (int(box[0]), int(box[1] + box[3]) + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, colors[colorIndex], 2)
 
-            # Print coordinatesXY local terminal
-            print("")
-            print("[INFO] TARGET: " + str(int(color + 1)) + ", COORDINATES: " + str(coordinatesXY))
-            print("")
+            # Get coordinates
+            dataSolvedResults = str(targetID) + self.getCoordinates(box)
 
-            # Send processed centroid coordinates by YARP Network
-            if (int(yarpInstalled) == 1) and (int(yarpMode) == 1):
+            systemResponseMessage = "\n[INFO] Results: " + str(dataSolvedResults) + ".\n"
+            self.systemResponse.text_color = "green"
+            self.systemResponse.succeed(systemResponseMessage)
 
-                # Sending processed centroid coordinates
-                outputBottleMultipleObjectTracker2D.clear()
-                outputBottleMultipleObjectTracker2D.addString("TARGET:")
-                outputBottleMultipleObjectTracker2D.addInt(int(color + 1))
-                outputBottleMultipleObjectTracker2D.addString("COORDINATES:")
-                outputBottleMultipleObjectTracker2D.addString(coordinatesXY)
-                outputBottleMultipleObjectTracker2D.addString("DATE:")
-                outputBottleMultipleObjectTracker2D.addString(str(datetime.datetime.now()))
-                multipleObjectTracker2D_portOutDet.write(outputBottleMultipleObjectTracker2D)
+            if int(yarpSend) == 1 and str(outputDataPort) != "null":
 
-        # Dispay multipleObjectTracker processed rgbFrame
-        cv2.imshow('[PROCESSED] multipleObjectTracker2D', rgbFrame)
+                # Send output
+                outputDataPort.send(dataSolvedResults)
 
-        # If key u is pressed re-select targets
-        if cv2.waitKey(33) == ord('u'):
+        return dataToSolve
 
-            # Build boxesArray and colorsArray
-            boxesArray = []
-            colorsArray = []
+    # Function: getCoordinates
+    def getCoordinates(self, box):
 
-            # Call objetTrackerSelectTargets function
-            boxesArray, colorsArray = objetTrackerSelectTargets(rgbFrame, boxesArray, colorsArray)
+        # Get centroid coordinates X and Y
+        x = int(box[0]) + int(box[2] / 2)
+        y = int(box[1]) + int(box[3] / 2)
 
-            # Create multiTracker object to overwrite old
-            multipleObjectTracker = cv2.MultiTracker_create()
+        coordinatesXY = " X: " + str(x) + ", Y: " + str(y)
 
-            # Initialize multiTracker object with region of interest selected in each box of rgbFrame
-            for box in boxesArray:
-                multipleObjectTracker.add(objectTrackerBuilder(trackerType), rgbFrame, box)
+        return coordinatesXY
 
-            print("")
-            print("[INFO] Multiple object tracker updated correctly.")
-            print("")
+    # Function: processRequest
+    def processRequests(self, trackerType, imageWidth, imageHeight, yarpSend, yarpReceive, outputImagePort, outputDataPort, inputImagePort):
 
-    # Send processed image by YARP Network
-    if (int(yarpInstalled) == 1) and (int(yarpMode) == 1):
+        # Variable to control check targets
+        checkTargets = 0
 
-        out_buf_array[:,:] = rgbFrame
-        multipleObjectTracker2D_portOut.write(out_buf_image)
+        # Variable to control loopProcessRequests
+        loopProcessRequests = 0
+
+        while int(loopProcessRequests) == 0:
+
+            # Waiting to input data request
+            print("**************************************************************************")
+            print("Waiting for input data request:")
+            print("**************************************************************************")
+
+            systemResponseMessage = "\n[INFO] Waiting for input data request at " + str(datetime.datetime.now()) + " ...\n"
+            self.systemResponse.text_color = "yellow"
+            self.systemResponse.warn(systemResponseMessage)
+
+            print("\n**************************************************************************")
+            print("Processing:")
+            print("**************************************************************************\n")
+
+            try:
+                dataToSolve = self.getDataToSolve(yarpReceive, inputImagePort, imageWidth, imageHeight)
+
+                if int(checkTargets) == 0:
+
+                    # Set targets and add to tracking system
+                    boxes, colors = self.getTargets(dataToSolve)
+                    trackerEngine = self.addTargets(self.getObjectTracker(), trackerType, dataToSolve, boxes)
+                    checkTargets = 1
+
+                    # First frame send base to solve frame
+                    dataSolved = dataToSolve
+
+                else:
+                    # Update tracker engine with new boxes position
+                    success, boxes = trackerEngine.update(dataToSolve)
+
+                    # Draw boxes
+                    dataSolved = self.drawBoxes(boxes, colors, dataToSolve, yarpSend, outputDataPort)
+
+                # Display data solved tracking
+                cv2.imshow('[PROCESSED] multipleObjectTracker2D', dataSolved)
+
+                # If key u is pressed re-select targets
+                if cv2.waitKey(33) == ord('u'):
+                    checkTargets = 0
+
+                if int(yarpSend) == 1 and str(outputImagePort) != "null":
+
+                    # Send output
+                    outputImagePort.send(dataSolved)
+
+            except:
+                systemResponseMessage = "\n[ERROR] Sorry, i couldn´t resolve your request.\n"
+                self.systemResponse.text_color = "red"
+                self.systemResponse.fail(systemResponseMessage)
 
 
-    # If key q is pressed exit programm
-    if cv2.waitKey(33) == ord('q'):
+class YarpDataPort:
 
-        print("")
-        print("[INFO] Key q pressed, finishing program ...")
-        print("")
-        break
+    # Function: Constructor
+    def __init__(self, portName):
 
-if (int(yarpInstalled) == 1) and (int(yarpMode) == 1):
+        # Build Halo spinner
+        self.systemResponse = Halo(spinner='dots')
 
-    # Close YARP ports
-    print("[INFO] Closing ports ...")
-    multipleObjectTracker2D_portIn.close()
-    multipleObjectTracker2D_portOut.close()
-    multipleObjectTracker2D_portOutDet.close()
+        # Build port and bottle
+        self.yarpPort = yarp.Port()
+        self.yarpBottle = yarp.Bottle()
 
-print("")
-print("")
-print("**************************************************************************")
-print("Program finished")
-print("**************************************************************************")
-print("")
-print("multipleObjectTracker2D program finished correctly.")
-print("")
+        systemResponseMessage = "\n[INFO] Opening Yarp data port " + str(portName) + " ...\n"
+        self.systemResponse.text_color = "yellow"
+        self.systemResponse.warn(systemResponseMessage)
+
+        # Open Yarp port
+        self.portName = portName
+        self.yarpPort.open(self.portName)
+
+    # Function: receive
+    def receive(self):
+
+        self.yarpPort.read(self.yarpBottle)
+        dataReceived = self.yarpBottle.toString()
+        dataReceived = dataReceived.replace('"', '')
+
+        systemResponseMessage = "\n[RECEIVED] Data received: " + str(dataReceived) + " at " + str(datetime.datetime.now()) + ".\n"
+        self.systemResponse.text_color = "blue"
+        self.systemResponse.info(systemResponseMessage)
+
+        return dataReceived
+
+    # Function: send
+    def send(self, dataToSend):
+
+        self.yarpBottle.clear()
+        self.yarpBottle.addString(str(dataToSend))
+        self.yarpPort.write(self.yarpBottle)
+
+    # Function: close
+    def close(self):
+
+        systemResponseMessage = "\n[INFO] " + str(self.portName) + " port closed correctly.\n"
+        self.systemResponse.text_color = "yellow"
+        self.systemResponse.warn(systemResponseMessage)
+
+        self.yarpPort.close()
+
+
+class YarpImagePort:
+
+    # Function: Constructor
+    def __init__(self, portName, imageWidth, imageHeight):
+
+        # Build Halo spinner
+        self.systemResponse = Halo(spinner='dots')
+
+        # If input image port required
+        if "/img:i" in str(portName):
+            self.yarpPort = yarp.BufferedPortImageRgb()
+
+        # If output image port required
+        else:
+            self.yarpPort = yarp.Port()
+
+        systemResponseMessage = "\n[INFO] Opening Yarp image port " + str(portName) + " ...\n"
+        self.systemResponse.text_color = "yellow"
+        self.systemResponse.warn(systemResponseMessage)
+
+        # Open Yarp port
+        self.portName = portName
+        self.yarpPort.open(self.portName)
+
+        # Build image buffer
+        self.imageWidth = int(imageWidth)
+        self.imageHeight = int(imageHeight)
+        self.bufferImage = yarp.ImageRgb()
+        self.bufferImage.resize(self.imageWidth, self.imageHeight)
+        self.bufferArray = np.ones((self.imageHeight, self.imageWidth, 3), np.uint8)
+        self.bufferImage.setExternal(self.bufferArray.data, self.bufferArray.shape[1], self.bufferArray.shape[0])
+
+    # Function: receive
+    def receive(self):
+
+        image = self.yarpPort.read()
+        self.bufferImage.copy(image)
+        assert self.bufferArray.__array_interface__['data'][0] == self.bufferImage.getRawImage().__int__()
+        image = self.bufferArray[:, :, ::-1]
+
+        return self.bufferArray
+
+    # Function: send
+    def send(self, dataToSend):
+
+        self.bufferArray[:,:] = dataToSend
+        self.yarpPort.write(self.bufferImage)
+
+    # Function: close
+    def close(self):
+
+        systemResponseMessage = "\n[INFO] " + str(self.portName) + " port closed correctly.\n"
+        self.systemResponse.text_color = "yellow"
+        self.systemResponse.warn(systemResponseMessage)
+
+        self.yarpPort.close()
+
+
+# Function: main
+def main():
+
+    print("**************************************************************************")
+    print("**************************************************************************")
+    print("                 Program: Multiple Object Tracker 2D                      ")
+    print("                     Author: David Velasco Garcia                         ")
+    print("                             @davidvelascogarcia                          ")
+    print("**************************************************************************")
+    print("**************************************************************************")
+
+    print("\nLoading Multiple Object Tracker 2D engine ...\n")
+
+    # Build multipleObjectTracker2D object
+    multipleObjectTracker2D = MultipleObjectTracker2D()
+
+    # Get system platform
+    systemPlatform, systemRelease = multipleObjectTracker2D.getSystemPlatform()
+
+    # Get authentication data
+    videoSource, imageWidth, imageHeight, trackerType, yarpSend, yarpReceive = multipleObjectTracker2D.getAuthenticationData()
+
+    # Check YARP installed if YARP is required
+    if int(yarpSend) == 1 or int(yarpReceive) == 1:
+
+        yarpInstalled = multipleObjectTracker2D.checkYARPInstalled()
+
+        if int(yarpInstalled) == 1:
+
+            # Init Yarp network
+            yarp.Network.init()
+
+            # Create Yarp ports
+            if int(yarpSend) == 1:
+                outputImagePort = YarpImagePort("/multipleObjectTracker2D/img:o", imageWidth, imageHeight)
+                outputDataPort = YarpDataPort("/multipleObjectTracker2D/data:o")
+
+            else:
+                outputImagePort = "null"
+                outputDataPort = "null"
+
+            if int(yarpReceive) == 1:
+                inputImagePort = YarpImagePort("/multipleObjectTracker2D/img:i", imageWidth, imageHeight)
+
+            else:
+                inputImagePort = multipleObjectTracker2D.initializaCaptureDevices(videoSource)
+
+        else:
+            outputImagePort = "null"
+            outputDataPort = "null"
+            inputImagePort = multipleObjectTracker2D.initializaCaptureDevices(videoSource)
+
+    else:
+        outputImagePort = "null"
+        outputDataPort = "null"
+        inputImagePort = multipleObjectTracker2D.initializaCaptureDevices(videoSource)
+
+    # Show system info
+    multipleObjectTracker2D.systemInfo()
+
+    # Process input requests
+    multipleObjectTracker2D.processRequests(trackerType, imageWidth, imageHeight, yarpSend, yarpReceive, outputImagePort, outputDataPort, inputImagePort)
+
+    # Close Yarp ports
+    if int(yarpSend) == 1 and int(yarpInstalled) == 1:
+        outputImagePort.close()
+        outputDataPort.close()
+
+    if int(yarpReceive) == 1 and int(yarpInstalled) == 1:
+        inputImagePort.close()
+
+    print("**************************************************************************")
+    print("Program finished")
+    print("**************************************************************************")
+    print("\nmultipleObjectTracker2D program finished correctly.\n")
+
+
+if __name__ == "__main__":
+
+    # Call main function
+    main()
