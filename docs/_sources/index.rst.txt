@@ -1,0 +1,35 @@
+.. Multiple Object Tracker 2D documentation master file, created by
+   sphinx-quickstart on Sun Feb 28 20:30:30 2021.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to Multiple Object Tracker 2D's documentation!
+======================================================
+
+multipleObjectTracker2D module use OpenCV Python API. This module tracks objects, people, animals or something that the user needs in a image source.
+multipleObjectTracker2D use OpenCV region of interest to select the region or different regions that the user need to track selecting with a rectangle with user mouse input.
+multipleObjectTracker2D is a multipurpose tracker, that support different OpenCV trackers like CSRT, GOTURN, KCF ...
+
+The module can be configured in config.ini file, selecting the track you want to use, also image source size to be resize and improve speed.
+By default use user webcam, but can be configured to use IP video source, local file or OpenCV supported sources.
+
+Also this module has support to use YARP middleware, and can receive video source from YARP port, the module receive in /multipleObjectTracker2D/img:i port.
+Also publish in YARP network in /multipleObjectTracker2D/img:o processed image source.
+
+Centroid tracked object coordinates is published in /multipleObjectTracker2D/data:o YARP port.
+The module can be used with or without YARP dependences and configured in config.ini file.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   docs/multipleObjectTracker2D
+
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

@@ -1,0 +1,7 @@
+multipleObjectTracker2D module
+==============================
+
+.. automodule:: multipleObjectTracker2D
+   :members:
+   :undoc-members:
+   :show-inheritance:
