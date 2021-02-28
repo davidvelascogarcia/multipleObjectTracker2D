@@ -24,6 +24,8 @@ Centroid tracked object coordinates is published in `/multipleObjectTracker2D/da
 
 The module can be used with or without `YARP` dependences and configured in [config.ini](./config) file.
 
+Documentation available on [docs](https://davidvelascogarcia.github.io/multipleObjectTracker2D/).
+
 ## Running Software
 
 - **Running without YARP support**
